@@ -30,11 +30,60 @@ const App: React.FC = () => {
   };
 
   const toggleLanguage = (id: string) => {
-    setSelectedLangs(prev => 
-      prev.includes(id) 
-        ? (prev.length > 1 ? prev.filter(l => l !== id) : prev) 
+    setSelectedLangs(prev =>
+      prev.includes(id)
+        ? (prev.length > 1 ? prev.filter(l => l !== id) : prev)
         : [...prev, id]
     );
+  };
+
+  // PDFダウンロード関数 - 動画名でファイル名を自動設定
+  const downloadPdf = async () => {
+    // html2pdf.js がグローバルに読み込まれている
+    const html2pdf = (window as any).html2pdf;
+    if (!html2pdf) {
+      console.error('html2pdf is not loaded');
+      window.print(); // フォールバック
+      return;
+    }
+
+    // PDF生成対象の要素を取得
+    const element = document.querySelector('main');
+    if (!element) return;
+
+    // 動画ファイル名から拡張子を除去してPDFファイル名を生成
+    const baseName = videoFile?.name.replace(/\.[^/.]+$/, '') || 'manual';
+    const fileName = `${baseName}_操作手順書.pdf`;
+
+    // PDF生成オプション
+    const options = {
+      margin: [10, 10, 10, 10],
+      filename: fileName,
+      image: { type: 'jpeg', quality: 0.95 },
+      html2canvas: {
+        scale: 2,
+        useCORS: true,
+        letterRendering: true
+      },
+      jsPDF: {
+        unit: 'mm',
+        format: 'a4',
+        orientation: 'portrait'
+      },
+      pagebreak: {
+        mode: ['avoid-all', 'css', 'legacy'],
+        before: '.page-break-before',
+        after: '.page-break-after',
+        avoid: '.break-inside-avoid'
+      }
+    };
+
+    try {
+      await html2pdf().set(options).from(element).save();
+    } catch (err) {
+      console.error('PDF generation failed:', err);
+      window.print(); // フォールバック
+    }
   };
 
   const processVideo = async () => {
@@ -51,16 +100,16 @@ const App: React.FC = () => {
       setProgress(20);
 
       const generatedSteps: Step[] = [];
-      
+
       // 2. 各フレームをGeminiで解析
       for (let i = 0; i < frames.length; i++) {
         const frame = frames[i];
         const analysis = await analyzeStep(
-          frame.dataUrl, 
-          `動画タイトル: "${videoFile.name}" のチュートリアル。ステップ ${i+1}`,
+          frame.dataUrl,
+          `動画タイトル: "${videoFile.name}" のチュートリアル。ステップ ${i + 1}`,
           selectedLangs
         );
-        
+
         generatedSteps.push({
           id: Math.random().toString(36).substr(2, 9),
           timestamp: frame.timestamp,
@@ -95,10 +144,10 @@ const App: React.FC = () => {
               AutoManual <span className="text-indigo-600 italic">AI</span>
             </h1>
           </div>
-          
+
           {steps.length > 0 && (
-            <button 
-              onClick={() => window.print()}
+            <button
+              onClick={downloadPdf}
               className="flex items-center gap-2 px-4 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-all text-sm font-bold shadow-md active:scale-95"
             >
               <Download className="w-4 h-4" />
@@ -117,7 +166,7 @@ const App: React.FC = () => {
                 多言語対応 AI 手順書ジェネレーター
               </div>
               <h2 className="text-4xl font-extrabold text-slate-900 mb-4 tracking-tight leading-tight">
-                動画をアップロードするだけで、<br/>
+                動画をアップロードするだけで、<br />
                 <span className="text-indigo-600 underline decoration-indigo-200">プロ級の手順書</span>を自動生成。
               </h2>
               <p className="text-slate-500 text-lg">Agentic Vision AI が操作内容を理解し、赤枠付きの画像と多言語解説を作成します。</p>
@@ -133,7 +182,7 @@ const App: React.FC = () => {
                 <p className="text-slate-400 text-sm">または、クリックしてファイルを選択（MP4, MOV, WEBM）</p>
               </div>
             </label>
-            
+
             <div className="mt-16 grid grid-cols-3 gap-8">
               {[
                 { icon: <FileVideo />, title: "録画", desc: "操作画面を撮影した動画を準備します。" },
@@ -158,7 +207,7 @@ const App: React.FC = () => {
               </div>
               <h3 className="text-2xl font-bold text-slate-900 mb-2">動画の準備ができました</h3>
               <p className="text-slate-500 mb-8">{videoFile.name} ({(videoFile.size / 1024 / 1024).toFixed(1)} MB)</p>
-              
+
               <div className="space-y-6 text-left mb-8 bg-slate-50 p-6 rounded-2xl border border-slate-200">
                 <div className="flex items-center gap-2 mb-4">
                   <Languages className="w-5 h-5 text-indigo-600" />
@@ -169,11 +218,10 @@ const App: React.FC = () => {
                     <button
                       key={lang.id}
                       onClick={() => toggleLanguage(lang.id)}
-                      className={`flex items-center justify-between p-3 rounded-xl border-2 transition-all font-medium ${
-                        selectedLangs.includes(lang.id) 
-                          ? 'border-indigo-500 bg-white text-indigo-700 shadow-sm' 
-                          : 'border-transparent bg-white/50 text-slate-400 hover:border-slate-300'
-                      }`}
+                      className={`flex items-center justify-between p-3 rounded-xl border-2 transition-all font-medium ${selectedLangs.includes(lang.id)
+                        ? 'border-indigo-500 bg-white text-indigo-700 shadow-sm'
+                        : 'border-transparent bg-white/50 text-slate-400 hover:border-slate-300'
+                        }`}
                     >
                       <span>{lang.label}</span>
                       {selectedLangs.includes(lang.id) && <CheckCircle className="w-4 h-4 text-indigo-600" />}
@@ -183,13 +231,13 @@ const App: React.FC = () => {
               </div>
 
               <div className="flex gap-4">
-                <button 
+                <button
                   onClick={() => setVideoFile(null)}
                   className="flex-1 py-4 px-6 border border-slate-200 rounded-2xl text-slate-600 font-bold hover:bg-slate-50 transition-colors"
                 >
                   キャンセル
                 </button>
-                <button 
+                <button
                   onClick={processVideo}
                   className="flex-[2] py-4 px-6 bg-indigo-600 text-white rounded-2xl font-bold hover:bg-indigo-700 shadow-xl shadow-indigo-100 flex items-center justify-center gap-3 group transition-all"
                 >
@@ -213,10 +261,10 @@ const App: React.FC = () => {
             <p className="text-slate-500 max-w-sm mx-auto leading-relaxed">
               AIが操作シーンを抽出・分析し、多言語での指示を作成しています。これには数十秒かかる場合があります。
             </p>
-            
+
             <div className="mt-12 w-full bg-slate-100 h-4 rounded-full overflow-hidden shadow-inner border border-slate-200">
-              <div 
-                className="bg-indigo-600 h-full transition-all duration-700 ease-out relative" 
+              <div
+                className="bg-indigo-600 h-full transition-all duration-700 ease-out relative"
                 style={{ width: `${progress}%` }}
               >
                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-pulse"></div>
@@ -229,7 +277,7 @@ const App: React.FC = () => {
           <div className="max-w-md mx-auto mt-10 p-6 bg-red-50 border border-red-200 rounded-2xl text-red-700 text-center shadow-lg shadow-red-50">
             <p className="font-bold text-lg mb-2 text-red-800">エラーが発生しました</p>
             <p className="text-sm opacity-90">{error}</p>
-            <button 
+            <button
               onClick={() => setVideoFile(null)}
               className="mt-6 px-6 py-2 bg-red-100 text-red-700 text-sm font-bold rounded-xl hover:bg-red-200 transition-colors"
             >

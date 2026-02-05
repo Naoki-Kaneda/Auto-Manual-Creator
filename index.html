@@ -1,31 +1,106 @@
-
 <!DOCTYPE html>
 <html lang="ja">
+
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Auto-Manual Creator</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-        body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            background-color: #f8fafc;
-        }
-    </style>
-<script type="importmap">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Auto-Manual Creator</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;600;700&display=swap');
+
+    body {
+      font-family: 'Noto Sans JP', 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: #f8fafc;
+    }
+
+    /* 印刷用スタイル */
+    @media print {
+
+      /* 基本設定 */
+      @page {
+        size: A4;
+        margin: 15mm;
+      }
+
+      /* 背景を白に */
+      body {
+        background-color: white !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+
+      /* ヘッダーとボタンを非表示 */
+      header {
+        display: none !important;
+      }
+
+      /* ステップカードのページ分割制御 */
+      .break-inside-avoid {
+        break-inside: avoid !important;
+        page-break-inside: avoid !important;
+      }
+
+      /* マージン調整 */
+      main {
+        padding: 0 !important;
+        max-width: 100% !important;
+      }
+
+      /* シャドウを削除（印刷では不要） */
+      .shadow-sm,
+      .shadow-md,
+      .shadow-lg,
+      .shadow-xl {
+        box-shadow: none !important;
+      }
+
+      /* ボーダーを維持 */
+      .border {
+        border: 1px solid #e2e8f0 !important;
+      }
+
+      /* フッターを非表示 */
+      .print\\:hidden {
+        display: none !important;
+      }
+
+      /* 画像を最大幅に */
+      canvas,
+      img {
+        max-width: 100% !important;
+        height: auto !important;
+      }
+
+      /* タイトル部分の調整 */
+      h2 {
+        font-size: 24px !important;
+      }
+
+      /* ステップ間のスペース調整 */
+      .mb-8 {
+        margin-bottom: 20px !important;
+      }
+    }
+  </style>
+  <script type="importmap">
 {
   "imports": {
     "lucide-react": "https://esm.sh/lucide-react@^0.563.0",
-    "@google/genai": "https://esm.sh/@google/genai@^1.40.0",
     "react-dom/": "https://esm.sh/react-dom@^19.2.4/",
     "react/": "https://esm.sh/react@^19.2.4/",
     "react": "https://esm.sh/react@^19.2.4"
   }
 }
 </script>
+  <!-- html2pdf.js for PDF generation with custom filename -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.2/html2pdf.bundle.min.js"></script>
 </head>
+
 <body>
-    <div id="root"></div>
+  <div id="root"></div>
+  <script type="module" src="/index.tsx"></script>
 </body>
+
 </html>
