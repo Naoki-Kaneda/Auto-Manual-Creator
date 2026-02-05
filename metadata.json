@@ -1,0 +1,7 @@
+{
+  "name": "Auto-Manual Creator",
+  "description": "An AI-powered tool that automatically generates professional operation manuals from video recordings by extracting key frames and annotating them with instructions.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
