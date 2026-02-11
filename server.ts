@@ -20,7 +20,7 @@ app.use(express.json({ limit: '50mb' })); // 大きな画像データを受け�
 // Analyze APIエンドポイント
 app.post('/api/analyze', async (req, res) => {
     try {
-        const { imageData, contextPrompt, languages } = req.body;
+        const { imageData, contextPrompt, languages, previousStep } = req.body;
 
         // 入力バリデーション
         if (!imageData || !contextPrompt || !languages || languages.length === 0) {
@@ -65,7 +65,11 @@ app.post('/api/analyze', async (req, res) => {
             これはソフトウェアの操作手順動画の1フレームです。
             この画像を分析し、現在の操作ステップを抽出してください。
             動画の文脈: ${contextPrompt}
-
+${previousStep ? `
+            前のステップのタイトル: "${previousStep.title}"
+            前のステップの説明: "${previousStep.description}"
+            このステップでは、前のステップからどのような変化が起きたかに注目して、新しい操作内容を記述してください。
+` : ''}
             以下の言語ですべて翻訳を提供してください: ${requestedLangs}
 
             出力はJSON形式で行い、各言語コードをキーにしてください。

@@ -10,6 +10,10 @@ interface AnalyzeRequest {
     imageData: string;      // Base64エンコードされた画像データ
     contextPrompt: string;  // 文脈情報
     languages: string[];    // 出力言語リスト
+    previousStep?: {        // 前のステップの情報（文脈強化用）
+        title: string;
+        description: string;
+    };
 }
 
 interface Translation {
@@ -50,7 +54,7 @@ export default async function handler(
     }
 
     try {
-        const { imageData, contextPrompt, languages } = req.body as AnalyzeRequest;
+        const { imageData, contextPrompt, languages, previousStep } = req.body as AnalyzeRequest;
 
         // 入力バリデーション
         if (!imageData || !contextPrompt || !languages || languages.length === 0) {
@@ -85,7 +89,11 @@ export default async function handler(
             これはソフトウェアの操作手順動画の1フレームです。
             この画像を分析し、現在の操作ステップを抽出してください。
             動画の文脈: ${contextPrompt}
-
+${previousStep ? `
+            前のステップのタイトル: "${previousStep.title}"
+            前のステップの説明: "${previousStep.description}"
+            このステップでは、前のステップからどのような変化が起きたかに注目して、新しい操作内容を記述してください。
+` : ''}
             以下の言語ですべて翻訳を提供してください: ${requestedLangs}
 
             出力はJSON形式で行い、各言語コードをキーにしてください。

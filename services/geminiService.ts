@@ -8,7 +8,8 @@ import { GeminiStepResponse } from "../types";
 export const analyzeStep = async (
   imageData: string,
   contextPrompt: string,
-  languages: string[]
+  languages: string[],
+  previousStep?: { title: string; description: string }
 ): Promise<GeminiStepResponse> => {
 
   // ローカル開発時とVercelデプロイ時で異なるエンドポイントを使用
@@ -24,7 +25,8 @@ export const analyzeStep = async (
     body: JSON.stringify({
       imageData,
       contextPrompt,
-      languages
+      languages,
+      previousStep
     })
   });
 

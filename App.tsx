@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
-import { Upload, FileVideo, Zap, CheckCircle, Download, Loader2, ArrowRight, Languages, Globe } from 'lucide-react';
-import { Step } from './types';
+import { Upload, FileVideo, Zap, CheckCircle, Download, Loader2, ArrowRight, Languages, Globe, SlidersHorizontal, Sparkles, LayoutGrid } from 'lucide-react';
+import { Step, ExtractionMode } from './types';
 import { extractFrames } from './utils/videoProcessor';
 import { analyzeStep } from './services/geminiService';
 import StepCard from './components/StepCard';
@@ -13,6 +13,9 @@ const App: React.FC = () => {
   const [steps, setSteps] = useState<Step[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [selectedLangs, setSelectedLangs] = useState<string[]>(['ja', 'en']);
+  const [extractionMode, setExtractionMode] = useState<ExtractionMode>('auto');
+  const [maxFrames, setMaxFrames] = useState(10);
+  const [processingPhase, setProcessingPhase] = useState<'scanning' | 'analyzing'>('scanning');
 
   const languages = [
     { id: 'ja', label: '日本語' },
@@ -93,21 +96,38 @@ const App: React.FC = () => {
       setIsProcessing(true);
       setError(null);
       setSteps([]);
-      setProgress(5);
+      setProgress(0);
+      setProcessingPhase('scanning');
 
-      // 1. フレームの抽出
-      const frames = await extractFrames(videoFile, 5);
-      setProgress(20);
+      // フェーズ1: フレームの抽出（シーン変化検出 or 等間隔）
+      const frames = await extractFrames(videoFile, {
+        mode: extractionMode,
+        maxFrames,
+        sensitivity: 0.15,
+        onProgress: (p) => setProgress(Math.round(p * 0.3)), // 0-30%
+      });
+      setProgress(30);
+      setProcessingPhase('analyzing');
 
       const generatedSteps: Step[] = [];
 
-      // 2. 各フレームをGeminiで解析
+      // フェーズ2: 各フレームをGeminiで解析（前ステップの文脈を渡す）
       for (let i = 0; i < frames.length; i++) {
         const frame = frames[i];
+
+        // 前のステップの情報を取得（2つ目以降のフレーム）
+        const previousStep = generatedSteps.length > 0
+          ? {
+            title: Object.values(generatedSteps[generatedSteps.length - 1].translations)[0]?.title || '',
+            description: Object.values(generatedSteps[generatedSteps.length - 1].translations)[0]?.description || ''
+          }
+          : undefined;
+
         const analysis = await analyzeStep(
           frame.dataUrl,
-          `動画タイトル: "${videoFile.name}" のチュートリアル。ステップ ${i + 1}`,
-          selectedLangs
+          `動画タイトル: "${videoFile.name}" のチュートリアル。ステップ ${i + 1}/${frames.length}`,
+          selectedLangs,
+          previousStep
         );
 
         generatedSteps.push({
@@ -118,7 +138,7 @@ const App: React.FC = () => {
           boundingBox: analysis.box_2d
         });
 
-        setProgress(20 + ((i + 1) / frames.length) * 80);
+        setProgress(30 + ((i + 1) / frames.length) * 70); // 30-100%
       }
 
       setSteps(generatedSteps);
@@ -209,6 +229,7 @@ const App: React.FC = () => {
               <p className="text-slate-500 mb-8">{videoFile.name} ({(videoFile.size / 1024 / 1024).toFixed(1)} MB)</p>
 
               <div className="space-y-6 text-left mb-8 bg-slate-50 p-6 rounded-2xl border border-slate-200">
+                {/* 言語選択 */}
                 <div className="flex items-center gap-2 mb-4">
                   <Languages className="w-5 h-5 text-indigo-600" />
                   <span className="font-bold text-slate-700">出力言語を選択してください:</span>
@@ -227,6 +248,64 @@ const App: React.FC = () => {
                       {selectedLangs.includes(lang.id) && <CheckCircle className="w-4 h-4 text-indigo-600" />}
                     </button>
                   ))}
+                </div>
+
+                {/* フレーム抽出設定 */}
+                <div className="mt-6 pt-6 border-t border-slate-200">
+                  <div className="flex items-center gap-2 mb-4">
+                    <SlidersHorizontal className="w-5 h-5 text-indigo-600" />
+                    <span className="font-bold text-slate-700">フレーム抽出設定:</span>
+                  </div>
+
+                  {/* モード切替 */}
+                  <div className="grid grid-cols-2 gap-3 mb-4">
+                    <button
+                      onClick={() => setExtractionMode('auto')}
+                      className={`flex items-center gap-2 p-3 rounded-xl border-2 transition-all font-medium ${extractionMode === 'auto'
+                          ? 'border-indigo-500 bg-white text-indigo-700 shadow-sm'
+                          : 'border-transparent bg-white/50 text-slate-400 hover:border-slate-300'
+                        }`}
+                    >
+                      <Sparkles className="w-4 h-4" />
+                      <div className="text-left">
+                        <div className="text-sm font-bold">自動（シーン検出）</div>
+                        <div className="text-[10px] opacity-70">画面変化を自動検知</div>
+                      </div>
+                    </button>
+                    <button
+                      onClick={() => setExtractionMode('manual')}
+                      className={`flex items-center gap-2 p-3 rounded-xl border-2 transition-all font-medium ${extractionMode === 'manual'
+                          ? 'border-indigo-500 bg-white text-indigo-700 shadow-sm'
+                          : 'border-transparent bg-white/50 text-slate-400 hover:border-slate-300'
+                        }`}
+                    >
+                      <LayoutGrid className="w-4 h-4" />
+                      <div className="text-left">
+                        <div className="text-sm font-bold">手動（等間隔）</div>
+                        <div className="text-[10px] opacity-70">均等にフレーム分割</div>
+                      </div>
+                    </button>
+                  </div>
+
+                  {/* フレーム数スライダー */}
+                  <div className="bg-white p-4 rounded-xl border border-slate-100">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm text-slate-600">最大フレーム数</span>
+                      <span className="text-sm font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-lg">{maxFrames}</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="3"
+                      max="15"
+                      value={maxFrames}
+                      onChange={(e) => setMaxFrames(Number(e.target.value))}
+                      className="w-full h-2 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+                    />
+                    <div className="flex justify-between text-[10px] text-slate-400 mt-1">
+                      <span>3</span>
+                      <span>15</span>
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -259,7 +338,9 @@ const App: React.FC = () => {
             </div>
             <h2 className="text-3xl font-bold text-slate-900 mb-4">手順書を自動生成中...</h2>
             <p className="text-slate-500 max-w-sm mx-auto leading-relaxed">
-              AIが操作シーンを抽出・分析し、多言語での指示を作成しています。これには数十秒かかる場合があります。
+              {processingPhase === 'scanning'
+                ? 'シーン変化を検出しながらキーフレームを抽出しています...'
+                : 'AIが各フレームを分析し、多言語での操作手順を生成しています...'}
             </p>
 
             <div className="mt-12 w-full bg-slate-100 h-4 rounded-full overflow-hidden shadow-inner border border-slate-200">
